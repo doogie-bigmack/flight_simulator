@@ -72,8 +72,6 @@ Create a simple 2D multiplayer flight simulator game called "Sky Squad" for kids
 - Keep game simple for kids (no complex menus or physics).
 
 ### 8. Verification
-- Run `flake8 server/` for Python linting.
-- Run `eslint client/main.js` for JavaScript linting (assume ESLint installed).
 - Test with `docker-compose up`, open `http://localhost` in 2–4 browser tabs, verify:
   - Planes move/rotate with arrow keys.
   - Stars are collected, score updates.

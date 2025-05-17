@@ -8,6 +8,11 @@ Requirements:
 - Docker
 - Docker Compose
 
+Environment variables:
+- `OIDC_CLIENT_ID`
+- `OIDC_CLIENT_SECRET`
+- `OIDC_ISSUER`
+
 Run:
 ```bash
 docker-compose up

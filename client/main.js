@@ -49,6 +49,16 @@ function handleKey(e) {
     break;
   case 'ArrowRight':
     socket.emit('move', { type: 'right' });
+    socket.emit('move', { command: 'up' });
+    break;
+  case 'ArrowDown':
+    socket.emit('move', { command: 'down' });
+    break;
+  case 'ArrowLeft':
+    socket.emit('move', { command: 'left' });
+    break;
+  case 'ArrowRight':
+    socket.emit('move', { command: 'right' });
     break;
   default:
     break;

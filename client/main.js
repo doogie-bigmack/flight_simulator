@@ -38,20 +38,20 @@ function createPlane() {
 
 function handleKey(e) {
   switch (e.key) {
-    case 'ArrowUp':
-      socket.emit('move', { type: 'up' });
-      break;
-    case 'ArrowDown':
-      socket.emit('move', { type: 'down' });
-      break;
-    case 'ArrowLeft':
-      socket.emit('move', { type: 'left' });
-      break;
-    case 'ArrowRight':
-      socket.emit('move', { type: 'right' });
-      break;
-    default:
-      break;
+  case 'ArrowUp':
+    socket.emit('move', { type: 'up' });
+    break;
+  case 'ArrowDown':
+    socket.emit('move', { type: 'down' });
+    break;
+  case 'ArrowLeft':
+    socket.emit('move', { type: 'left' });
+    break;
+  case 'ArrowRight':
+    socket.emit('move', { type: 'right' });
+    break;
+  default:
+    break;
   }
 }
 
@@ -62,20 +62,20 @@ function updateGame(state) {
 export function computeNewPosition(pos, command) {
   const newPos = { ...pos };
   switch (command) {
-    case 'up':
-      newPos.y += speed;
-      break;
-    case 'down':
-      newPos.y -= speed;
-      break;
-    case 'left':
-      newPos.x -= speed;
-      break;
-    case 'right':
-      newPos.x += speed;
-      break;
-    default:
-      break;
+  case 'up':
+    newPos.y += speed;
+    break;
+  case 'down':
+    newPos.y -= speed;
+    break;
+  case 'left':
+    newPos.x -= speed;
+    break;
+  case 'right':
+    newPos.x += speed;
+    break;
+  default:
+    break;
   }
   return newPos;
 }

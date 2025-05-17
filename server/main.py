@@ -146,7 +146,11 @@ async def websocket_endpoint(socket: WebSocket):
         while True:
             data = await socket.receive_json()
             if data.get('type') == 'join':
-                players[socket] = {'username': data['username'], 'x': 0, 'y': 0}
+                players[socket] = {
+                    'username': data['username'],
+                    'x': 0,
+                    'y': 0,
+                }
             if data.get('type') == 'move' and socket in players:
                 cmd = data.get('command')
                 pos = players[socket]

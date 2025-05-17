@@ -1,8 +1,13 @@
 let socket;
 let plane;
 let stars = [];
+let starMeshes = {};
 let username = '';
 const speed = 0.1;
+let planePos = { x: 0, y: 0 };
+let scene;
+let renderer;
+let camera;
 
 function startGame(name) {
   username = name;
@@ -16,9 +21,9 @@ function startGame(name) {
 
 function initScene() {
   const canvas = document.getElementById('gameCanvas');
-  const renderer = new THREE.WebGLRenderer({ canvas });
-  const scene = new THREE.Scene();
-  const camera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 10);
+  renderer = new THREE.WebGLRenderer({ canvas });
+  scene = new THREE.Scene();
+  camera = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 10);
   camera.position.z = 5;
   plane = createPlane();
   scene.add(plane);
@@ -36,37 +41,57 @@ function createPlane() {
   return new THREE.Mesh(geometry, material);
 }
 
+function createStar() {
+  const geometry = new THREE.BoxGeometry(0.3, 0.3, 0);
+  const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  return new THREE.Mesh(geometry, material);
+}
+
 function handleKey(e) {
+  let cmd;
   switch (e.key) {
   case 'ArrowUp':
-    socket.emit('move', { type: 'up' });
+    cmd = 'up';
     break;
   case 'ArrowDown':
-    socket.emit('move', { type: 'down' });
+    cmd = 'down';
     break;
   case 'ArrowLeft':
-    socket.emit('move', { type: 'left' });
+    cmd = 'left';
     break;
   case 'ArrowRight':
-    socket.emit('move', { type: 'right' });
-    socket.emit('move', { command: 'up' });
-    break;
-  case 'ArrowDown':
-    socket.emit('move', { command: 'down' });
-    break;
-  case 'ArrowLeft':
-    socket.emit('move', { command: 'left' });
-    break;
-  case 'ArrowRight':
-    socket.emit('move', { command: 'right' });
+    cmd = 'right';
     break;
   default:
-    break;
+    return;
   }
+  socket.emit('move', { type: 'move', command: cmd });
+  planePos = computeNewPosition(planePos, cmd);
+  plane.position.set(planePos.x, planePos.y, 0);
 }
 
 function updateGame(state) {
   document.getElementById('score').textContent = `Score: ${state.score}`;
+  stars = state.stars;
+  stars.forEach((star) => {
+    if (!starMeshes[star.id]) {
+      const mesh = createStar();
+      starMeshes[star.id] = mesh;
+      scene.add(mesh);
+    }
+    starMeshes[star.id].position.set(star.x, star.y, 0);
+  });
+  Object.keys(starMeshes).forEach((id) => {
+    if (!stars.find((s) => s.id === id)) {
+      scene.remove(starMeshes[id]);
+      delete starMeshes[id];
+    }
+  });
+  stars.forEach((star) => {
+    if (isColliding(planePos, star, 0.5)) {
+      socket.emit('collect_star', { type: 'collect_star', starId: star.id });
+    }
+  });
 }
 
 export function computeNewPosition(pos, command) {
@@ -89,3 +114,10 @@ export function computeNewPosition(pos, command) {
   }
   return newPos;
 }
+
+export function isColliding(p1, p2, threshold = 0.5) {
+  const dx = p1.x - p2.x;
+  const dy = p1.y - p2.y;
+  return Math.sqrt(dx * dx + dy * dy) < threshold;
+}
+

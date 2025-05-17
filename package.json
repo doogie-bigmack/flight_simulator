@@ -2,11 +2,9 @@
   "name": "sky-squad-client",
   "version": "1.0.0",
   "scripts": {
-    "test": "jest",
-    "lint": "eslint client/main.js"
+    "test": "jest"
   },
   "devDependencies": {
-    "eslint": "^8.0.0"
   },
   "type": "module"
 }

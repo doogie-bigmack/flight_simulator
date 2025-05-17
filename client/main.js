@@ -39,6 +39,16 @@ function createPlane() {
 function handleKey(e) {
   switch (e.key) {
   case 'ArrowUp':
+    socket.emit('move', { type: 'up' });
+    break;
+  case 'ArrowDown':
+    socket.emit('move', { type: 'down' });
+    break;
+  case 'ArrowLeft':
+    socket.emit('move', { type: 'left' });
+    break;
+  case 'ArrowRight':
+    socket.emit('move', { type: 'right' });
     socket.emit('move', { command: 'up' });
     break;
   case 'ArrowDown':

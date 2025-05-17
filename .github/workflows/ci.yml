@@ -16,4 +16,4 @@ jobs:
       - name: Test Python
         run: python -m unittest discover tests/backend
       - name: Test JS
-        run: node --test tests/frontend/movement.test.js
+        run: npm test

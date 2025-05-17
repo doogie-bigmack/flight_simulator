@@ -70,6 +70,7 @@ except Exception:  # fallback for tests
 
 import os
 import uvicorn
+import asyncio
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'secret')
 
@@ -144,6 +145,11 @@ async def websocket_endpoint(socket: WebSocket):
     await sm.connect(socket)
     try:
         while True:
+            await sm.emit('state', {"score": 0})
+            # throttle updates to avoid hogging CPU
+            await asyncio.sleep(0.05)
+    except Exception:
+        pass
             data = await socket.receive_json()
             if data.get('type') == 'join':
                 players[socket] = {

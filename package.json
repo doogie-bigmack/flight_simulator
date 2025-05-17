@@ -2,7 +2,7 @@
   "name": "sky-squad-client",
   "version": "1.0.0",
   "scripts": {
-    "test": "node --test tests/frontend/movement.test.js",
+    "test": "jest",
     "lint": "eslint client/main.js"
   },
   "devDependencies": {

@@ -2,7 +2,8 @@ try:
     from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException
     from fastapi_socketio import SocketManager
     from pydantic import BaseModel
-    from jose import jwt, JWTError
+    from jose import jwt, JWTError, jwk
+    from authlib.integrations.requests_client import OAuth2Session
     from sqlalchemy import create_engine, Column, Integer, String
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.orm import sessionmaker, Session
@@ -67,11 +68,20 @@ except Exception:  # fallback for tests
     bcrypt = DummyBcrypt
     jwt = None
     JWTError = Exception
+    jwk = None
+    class OAuth2Session:
+        def __init__(self, *args, **kwargs):
+            pass
+        def fetch_jwk_set(self, issuer):
+            return {'keys': []}
 
 import os
 import uvicorn
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'secret')
+OIDC_CLIENT_ID = os.getenv('OIDC_CLIENT_ID', '')
+OIDC_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET', '')
+OIDC_ISSUER = os.getenv('OIDC_ISSUER', '')
 
 app = FastAPI()
 sm = SocketManager(app=app)
@@ -101,9 +111,6 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
 
-class TokenRequest(BaseModel):
-    token: str
-
 def get_db():
     db = SessionLocal()
     try:
@@ -111,25 +118,51 @@ def get_db():
     finally:
         db.close()
 
-def create_token(username: str) -> str:
-    return jwt.encode({'sub': username}, SECRET_KEY, algorithm='HS256')
+def fetch_jwks() -> dict:
+    if jwt is None or jwk is None:
+        return {'keys': []}
+    client = OAuth2Session(client_id=OIDC_CLIENT_ID,
+                           client_secret=OIDC_CLIENT_SECRET)
+    try:
+        return client.fetch_jwk_set(OIDC_ISSUER)
+    except Exception:
+        return {'keys': []}
+
+JWKS = fetch_jwks()
 
 def verify_token(token: str) -> str:
+    if jwt is None or jwk is None:
+        return token
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        header = jwt.get_unverified_header(token)
+        key_data = next((k for k in JWKS.get('keys', [])
+                         if k.get('kid') == header.get('kid')), None)
+        if not key_data:
+            raise JWTError('Key not found')
+        key = jwk.construct(key_data)
+        payload = jwt.decode(
+            token,
+            key.to_pem().decode('utf-8'),
+            algorithms=[key_data.get('alg', 'RS256')],
+            audience=OIDC_CLIENT_ID,
+            issuer=OIDC_ISSUER,
+        )
         return payload.get('sub')
-    except JWTError as exc:
+    except Exception as exc:
         raise HTTPException(status_code=401, detail='Invalid token') from exc
 
 @app.post('/register')
-async def register(req: RegisterRequest, db: Session = Depends(get_db)):
+async def register(req: RegisterRequest, authorization: str = '',
+                   db: Session = Depends(get_db)):
+    token = authorization.replace('Bearer ', '') if authorization else ''
+    verify_token(token)
     data = req.dict()
     register_user(data, db)
-    token = create_token(data['username'])
-    return {'token': token}
+    return {'status': 'ok'}
 
 @app.get('/stats')
-async def get_stats(token: str, db: Session = Depends(get_db)):
+async def get_stats(authorization: str = '', db: Session = Depends(get_db)):
+    token = authorization.replace('Bearer ', '') if authorization else ''
     username = verify_token(token)
     user = db.query(User).filter_by(username=username).first()
     if not user:

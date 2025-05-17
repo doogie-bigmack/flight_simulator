@@ -8,7 +8,7 @@
       "testStrategy": "Verify that the development environment is properly set up by creating a simple test scene that runs without errors. Ensure all team members can access the repository and run the project locally.",
       "priority": "high",
       "dependencies": [],
-      "status": "pending",
+      "status": "done",
       "subtasks": []
     },
     {

@@ -31,6 +31,7 @@ except Exception:  # fallback for tests
 
 from pydantic import BaseModel
 import uvicorn
+import asyncio
 
 app = FastAPI()
 sm = SocketManager(app=app)
@@ -54,6 +55,8 @@ async def websocket_endpoint(socket: WebSocket):
     try:
         while True:
             await sm.emit('state', {"score": 0})
+            # throttle updates to avoid hogging CPU
+            await asyncio.sleep(0.05)
     except Exception:
         pass
 

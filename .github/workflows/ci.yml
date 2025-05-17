@@ -1,0 +1,19 @@
+name: CI
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install -r server/requirements.txt
+          npm install --ignore-scripts || true
+      - name: Test Python
+        run: python -m unittest discover tests/backend
+      - name: Test JS
+        run: node --test tests/frontend/movement.test.js

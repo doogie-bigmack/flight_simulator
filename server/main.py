@@ -28,6 +28,10 @@ except Exception:  # fallback for tests
             def decorator(func):
                 return func
             return decorator
+        def on_event(self, name):
+            def decorator(func):
+                return func
+            return decorator
     class SocketManager:
         def __init__(self, *args, **kwargs):
             self.manager = self
@@ -78,6 +82,8 @@ except Exception:  # fallback for tests
 import os
 import uvicorn
 import asyncio
+import random
+from uuid import uuid4
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'secret')
 OIDC_CLIENT_ID = os.getenv('OIDC_CLIENT_ID', '')
@@ -86,6 +92,11 @@ OIDC_ISSUER = os.getenv('OIDC_ISSUER', '')
 
 app = FastAPI()
 sm = SocketManager(app=app)
+
+
+@app.on_event('startup')
+async def startup_event():
+    asyncio.create_task(spawn_stars())
 
 engine = create_engine('sqlite:///app.db', connect_args={'check_same_thread': False})
 SessionLocal = sessionmaker(bind=engine)
@@ -172,37 +183,63 @@ async def get_stats(authorization: str = '', db: Session = Depends(get_db)):
 
 players = {}
 score = 0
+stars = []
+
+
+async def spawn_stars():
+    """Periodically spawn stars at random positions."""
+    while True:
+        stars.append({'id': str(uuid4()),
+                      'x': random.uniform(-5, 5),
+                      'y': random.uniform(-5, 5)})
+        await asyncio.sleep(1)
+
+
+def collect_star(star_id: str) -> bool:
+    """Remove star and increase score if it exists."""
+    global score
+    star = next((s for s in stars if s['id'] == star_id), None)
+    if star:
+        stars.remove(star)
+        score += 1
+        return True
+    return False
 
 @app.websocket('/ws')
 async def websocket_endpoint(socket: WebSocket):
     await sm.connect(socket)
+    players[socket] = {'username': '', 'x': 0.0, 'y': 0.0}
     try:
         while True:
-            await sm.emit('state', {"score": 0})
-            # throttle updates to avoid hogging CPU
+            try:
+                data = await asyncio.wait_for(socket.receive_json(),
+                                             timeout=0.05)
+            except asyncio.TimeoutError:
+                data = None
+            if data:
+                if data.get('type') == 'join':
+                    players[socket]['username'] = data.get('username', '')
+                elif data.get('type') == 'move' and socket in players:
+                    cmd = data.get('command')
+                    pos = players[socket]
+                    if cmd == 'up':
+                        pos['y'] += 0.1
+                    elif cmd == 'down':
+                        pos['y'] -= 0.1
+                    elif cmd == 'left':
+                        pos['x'] -= 0.1
+                    elif cmd == 'right':
+                        pos['x'] += 0.1
+                    players[socket] = pos
+                elif data.get('type') == 'collect_star':
+                    collect_star(data.get('starId', ''))
+            state = {
+                'score': score,
+                'players': list(players.values()),
+                'stars': stars,
+            }
+            await sm.emit('state', state)
             await asyncio.sleep(0.05)
-    except Exception:
-        pass
-            data = await socket.receive_json()
-            if data.get('type') == 'join':
-                players[socket] = {
-                    'username': data['username'],
-                    'x': 0,
-                    'y': 0,
-                }
-            if data.get('type') == 'move' and socket in players:
-                cmd = data.get('command')
-                pos = players[socket]
-                if cmd == 'up':
-                    pos['y'] += 0.1
-                elif cmd == 'down':
-                    pos['y'] -= 0.1
-                elif cmd == 'left':
-                    pos['x'] -= 0.1
-                elif cmd == 'right':
-                    pos['x'] += 0.1
-                players[socket] = pos
-            await sm.emit('state', {'score': score})
     except WebSocketDisconnect:
         players.pop(socket, None)
 

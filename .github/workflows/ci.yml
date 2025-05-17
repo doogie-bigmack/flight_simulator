@@ -11,8 +11,8 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pip install -r server/requirements.txt || true
-          npm install || true
+          pip install -r server/requirements.txt
+          npm install --ignore-scripts || true
       - name: Test Python
         run: python -m unittest discover tests/backend
       - name: Test JS

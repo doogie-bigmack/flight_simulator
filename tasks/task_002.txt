@@ -1,6 +1,6 @@
 # Task ID: 2
 # Title: Game Design Document Creation
-# Status: pending
+# Status: done
 # Dependencies: 1
 # Priority: high
 # Description: Create a comprehensive game design document outlining the core mechanics, visual style, and gameplay elements for the star collection game.
@@ -18,3 +18,4 @@ The document should focus on simplicity and engagement for the target age group 
 
 # Test Strategy:
 Review the game design document with stakeholders and potentially with a small focus group of children in the target age range. Validate that the proposed mechanics align with the objective of 90% of players playing for at least 10 minutes.
+Design document located at docs/design.md.

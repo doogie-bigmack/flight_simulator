@@ -235,6 +235,7 @@ function updateGame(state) {
   stars.forEach((star) => {
     if (isColliding(planePos, star, 0.5)) {
       socket.emit('collect_star', { type: 'collect_star', starId: star.id });
+<<<<<<< HEAD
       
       // Play sound effect based on star value
       playCollectSound(star.value || 1);
@@ -265,6 +266,8 @@ export function computeNewPosition(pos, command) {
   default:
     break;
   }
+  newPos.x = Math.min(5, Math.max(-5, newPos.x));
+  newPos.y = Math.min(5, Math.max(-5, newPos.y));
   return newPos;
 }
 

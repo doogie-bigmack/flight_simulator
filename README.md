@@ -9,12 +9,14 @@ Requirements:
 - Docker Compose
 
 Environment variables:
-- `OIDC_CLIENT_ID`
-- `OIDC_CLIENT_SECRET`
-- `OIDC_ISSUER`
+- `SECRET_KEY` (optional)
 
 Run:
 ```bash
 docker-compose up
 ```
 Then open `http://localhost`.
+
+Use the registration form to create an account, then log in to receive a JWT
+token. The game uses this token for authenticated requests.
+

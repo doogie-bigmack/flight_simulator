@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kids_flight_simulator"
+version = "0.1.0"
+description = "Sky Squad Flight Simulator for kids"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    {name = "Sky Squad Team"}
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "flake8>=6.0.0",
+    "black>=23.0.0"
+]
+
+[tool.setuptools]
+packages = ["server"]
+
+[tool.pytest]
+testpaths = ["tests"]
+python_files = "test_*.py"

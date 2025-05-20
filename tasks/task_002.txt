@@ -18,3 +18,4 @@ The document should focus on simplicity and engagement for the target age group 
 
 # Test Strategy:
 Review the game design document with stakeholders and potentially with a small focus group of children in the target age range. Validate that the proposed mechanics align with the objective of 90% of players playing for at least 10 minutes.
+Design document located at docs/design.md.

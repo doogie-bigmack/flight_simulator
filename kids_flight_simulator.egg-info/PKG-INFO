@@ -1,0 +1,33 @@
+Metadata-Version: 2.4
+Name: kids_flight_simulator
+Version: 0.1.0
+Summary: Sky Squad Flight Simulator for kids
+Author: Sky Squad Team
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Provides-Extra: test
+Requires-Dist: pytest>=7.0.0; extra == "test"
+Requires-Dist: pytest-cov>=4.0.0; extra == "test"
+Requires-Dist: flake8>=6.0.0; extra == "test"
+Requires-Dist: black>=23.0.0; extra == "test"
+
+# Sky Squad
+
+Sky Squad is a simple 2D multiplayer flight simulator game for kids. Players control colorful planes to collect stars together.
+
+## Setup
+
+Requirements:
+- Docker
+- Docker Compose
+
+Environment variables:
+- `OIDC_CLIENT_ID`
+- `OIDC_CLIENT_SECRET`
+- `OIDC_ISSUER`
+
+Run:
+```bash
+docker-compose up
+```
+Then open `http://localhost`.

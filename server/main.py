@@ -190,6 +190,15 @@ def collect_star(star_id: str) -> bool:
 
 @app.websocket('/ws')
 async def websocket_endpoint(socket: WebSocket):
+    token = ''
+    if hasattr(socket, 'query_params'):
+        token = socket.query_params.get('token', '')
+    try:
+        verify_token(token)
+    except HTTPException:
+        if hasattr(socket, 'close'):
+            await socket.close(code=403)
+        return
     await sm.connect(socket)
     players[socket] = {'username': '', 'x': 0.0, 'y': 0.0}
     try:

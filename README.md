@@ -18,5 +18,6 @@ docker-compose up
 Then open `http://localhost`.
 
 Use the registration form to create an account, then log in to receive a JWT
-token. The game uses this token for authenticated requests.
+token. The game uses this token for authenticated requests. Tokens are valid for
+one hour by default.
 

@@ -2,8 +2,7 @@ try:
     from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException
     from fastapi_socketio import SocketManager
     from pydantic import BaseModel
-    from jose import jwt, JWTError, jwk
-    from authlib.integrations.requests_client import OAuth2Session
+    from jose import jwt, JWTError
     from sqlalchemy import create_engine, Column, Integer, String
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.orm import sessionmaker, Session
@@ -72,12 +71,6 @@ except Exception:  # fallback for tests
     bcrypt = DummyBcrypt
     jwt = None
     JWTError = Exception
-    jwk = None
-    class OAuth2Session:
-        def __init__(self, *args, **kwargs):
-            pass
-        def fetch_jwk_set(self, issuer):
-            return {'keys': []}
 
 import os
 import uvicorn
@@ -86,9 +79,6 @@ import random
 from uuid import uuid4
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'secret')
-OIDC_CLIENT_ID = os.getenv('OIDC_CLIENT_ID', '')
-OIDC_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET', '')
-OIDC_ISSUER = os.getenv('OIDC_ISSUER', '')
 
 app = FastAPI()
 sm = SocketManager(app=app)
@@ -123,6 +113,11 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
 
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
 def get_db():
     db = SessionLocal()
     try:
@@ -130,47 +125,35 @@ def get_db():
     finally:
         db.close()
 
-def fetch_jwks() -> dict:
-    if jwt is None or jwk is None:
-        return {'keys': []}
-    client = OAuth2Session(client_id=OIDC_CLIENT_ID,
-                           client_secret=OIDC_CLIENT_SECRET)
-    try:
-        return client.fetch_jwk_set(OIDC_ISSUER)
-    except Exception:
-        return {'keys': []}
+def create_token(username: str) -> str:
+    if jwt is None:
+        return username
+    return jwt.encode({'sub': username}, SECRET_KEY, algorithm='HS256')
 
-JWKS = fetch_jwks()
 
 def verify_token(token: str) -> str:
-    if jwt is None or jwk is None:
+    if jwt is None:
         return token
     try:
-        header = jwt.get_unverified_header(token)
-        key_data = next((k for k in JWKS.get('keys', [])
-                         if k.get('kid') == header.get('kid')), None)
-        if not key_data:
-            raise JWTError('Key not found')
-        key = jwk.construct(key_data)
-        payload = jwt.decode(
-            token,
-            key.to_pem().decode('utf-8'),
-            algorithms=[key_data.get('alg', 'RS256')],
-            audience=OIDC_CLIENT_ID,
-            issuer=OIDC_ISSUER,
-        )
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
         return payload.get('sub')
     except Exception as exc:
         raise HTTPException(status_code=401, detail='Invalid token') from exc
 
 @app.post('/register')
-async def register(req: RegisterRequest, authorization: str = '',
-                   db: Session = Depends(get_db)):
-    token = authorization.replace('Bearer ', '') if authorization else ''
-    verify_token(token)
+async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     data = req.dict()
     register_user(data, db)
     return {'status': 'ok'}
+
+
+@app.post('/login')
+async def login(req: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter_by(username=req.username).first()
+    if not user or not bcrypt.verify(req.password, user.password):
+        raise HTTPException(status_code=401, detail='Invalid credentials')
+    token = create_token(user.username)
+    return {'token': token}
 
 @app.get('/stats')
 async def get_stats(authorization: str = '', db: Session = Depends(get_db)):
@@ -201,7 +184,7 @@ def collect_star(star_id: str) -> bool:
     star = next((s for s in stars if s['id'] == star_id), None)
     if star:
         stars.remove(star)
-        score += 1
+        score += 10
         return True
     return False
 
@@ -232,7 +215,17 @@ async def websocket_endpoint(socket: WebSocket):
                         pos['x'] += 0.1
                     players[socket] = pos
                 elif data.get('type') == 'collect_star':
-                    collect_star(data.get('starId', ''))
+                    if collect_star(data.get('starId', '')):
+                        username = players[socket].get('username', '')
+                        if username:
+                            try:
+                                db = SessionLocal()
+                                user = db.query(User).filter_by(username=username).first()
+                                if user:
+                                    user.stars += 1
+                                    db.commit()
+                            finally:
+                                db.close()
             state = {
                 'score': score,
                 'players': list(players.values()),

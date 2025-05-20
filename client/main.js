@@ -81,7 +81,8 @@ async function initSystems() {
  */
 function startGame(name) {
   username = name;
-  socket = io('/ws');
+  const token = localStorage.getItem('token') || '';
+  socket = io('/ws', { query: { token } });
   socket.on('state', (state) => {
     updateGame(state);
   });

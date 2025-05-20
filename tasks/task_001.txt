@@ -1,6 +1,6 @@
 # Task ID: 1
 # Title: Project Setup and Game Engine Selection
-# Status: pending
+# Status: done
 # Dependencies: None
 # Priority: high
 # Description: Set up the development environment and select an appropriate game engine for a kid-friendly multiplayer game.

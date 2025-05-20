@@ -1,6 +1,6 @@
 # Task ID: 6
 # Title: Multiplayer Functionality Implementation
-# Status: pending
+# Status: done
 # Dependencies: 4, 5
 # Priority: medium
 # Description: Implement multiplayer capabilities allowing children to play together in the same game environment.

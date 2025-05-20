@@ -1,6 +1,6 @@
 # Task ID: 2
 # Title: Game Design Document Creation
-# Status: pending
+# Status: done
 # Dependencies: 1
 # Priority: high
 # Description: Create a comprehensive game design document outlining the core mechanics, visual style, and gameplay elements for the star collection game.

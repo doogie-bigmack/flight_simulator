@@ -17,11 +17,67 @@
       <button type="submit">Register</button>
     </form>
   </div>
+  
+  <div id="settings" class="settings-panel" style="display:none;">
+    <h3>Settings</h3>
+    <div class="setting">
+      <label for="masterVolume">Master Volume</label>
+      <input type="range" id="masterVolume" min="0" max="100" value="80">
+      <span class="value">80%</span>
+    </div>
+    <div class="setting">
+      <label for="musicVolume">Music Volume</label>
+      <input type="range" id="musicVolume" min="0" max="100" value="50">
+      <span class="value">50%</span>
+    </div>
+    <div class="setting">
+      <label for="sfxVolume">Sound Effects</label>
+      <input type="range" id="sfxVolume" min="0" max="100" value="70">
+      <span class="value">70%</span>
+    </div>
+    <div class="setting">
+      <label for="muteAudio">Mute All Audio</label>
+      <input type="checkbox" id="muteAudio">
+    </div>
+    <div class="setting">
+      <label for="visualFeedback">Enhanced Visual Feedback</label>
+      <input type="checkbox" id="visualFeedback" checked>
+    </div>
+    <button id="closeSettings">Close</button>
+  </div>
+  
   <div id="game" style="display:none;">
     <div id="score">Score: 0</div>
+    <div id="playerName"></div>
+    <div class="game-buttons">
+      <button id="settingsButton" class="settings-button">⚙️</button>
+      <button id="progress-button" class="progress-button">🏆</button>
+      <button id="challenges-button" class="challenges-button">🎯</button>
+    </div>
     <canvas id="gameCanvas"></canvas>
   </div>
-  <script src="login.js"></script>
-  <script src="main.js"></script>
+  
+  <div id="progress-panel" class="panel">
+    <div class="panel-header">
+      <h3>Player Progress</h3>
+      <button id="close-progress" class="close-button">×</button>
+    </div>
+    <div id="progress-content" class="panel-content"></div>
+  </div>
+  
+  <div id="challenges-panel" class="panel">
+    <div class="panel-header">
+      <h3>Daily Challenges</h3>
+      <button id="close-challenges" class="close-button">×</button>
+    </div>
+    <div id="challenges-content" class="panel-content"></div>
+  </div>
+  
+  <div id="achievements" class="achievements-panel"></div>
+  
+  <script type="module" src="audio.js"></script>
+  <script type="module" src="settings.js"></script>
+  <script type="module" src="login.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>

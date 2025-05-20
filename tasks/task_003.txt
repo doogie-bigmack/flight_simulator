@@ -1,6 +1,6 @@
 # Task ID: 3
 # Title: Basic Game Environment Implementation
-# Status: pending
+# Status: done
 # Dependencies: 1, 2
 # Priority: medium
 # Description: Implement the basic game environment where players will collect stars, including terrain, boundaries, and visual elements.

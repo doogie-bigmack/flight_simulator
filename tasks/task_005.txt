@@ -1,6 +1,6 @@
 # Task ID: 5
 # Title: Star Collection Mechanics
-# Status: pending
+# Status: done
 # Dependencies: 4
 # Priority: high
 # Description: Implement the core star collection mechanics including star spawning, collection logic, and visual/audio feedback.

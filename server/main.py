@@ -76,6 +76,7 @@ import os
 import uvicorn
 import asyncio
 import random
+import time
 from uuid import uuid4
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'secret')
@@ -126,19 +127,27 @@ def get_db():
         db.close()
 
 def create_token(username: str) -> str:
+    """Return a JWT for the given username with a 1 hour expiry."""
     if jwt is None:
         return username
-    return jwt.encode({'sub': username}, SECRET_KEY, algorithm='HS256')
+    exp = int(time.time()) + 3600
+    payload = {'sub': username, 'exp': exp}
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 
 def verify_token(token: str) -> str:
+    """Validate a JWT and return the username if valid and not expired."""
     if jwt is None:
         return token
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-        return payload.get('sub')
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'],
+                             options={'verify_exp': False})
     except Exception as exc:
         raise HTTPException(status_code=401, detail='Invalid token') from exc
+    exp = payload.get('exp')
+    if exp is not None and exp < int(time.time()):
+        raise HTTPException(status_code=401, detail='Token expired')
+    return payload.get('sub')
 
 @app.post('/register')
 async def register(req: RegisterRequest, db: Session = Depends(get_db)):

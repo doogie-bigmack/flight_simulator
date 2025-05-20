@@ -17,6 +17,7 @@ function startGame(name) {
   });
   socket.emit('join', { username });
   initScene();
+  document.getElementById('playerName').textContent = username;
 }
 
 function initScene() {
@@ -45,6 +46,16 @@ function createStar() {
   const geometry = new THREE.BoxGeometry(0.3, 0.3, 0);
   const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
   return new THREE.Mesh(geometry, material);
+}
+
+function playCollectSound() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = 880;
+  osc.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.1);
 }
 
 function handleKey(e) {
@@ -90,6 +101,7 @@ function updateGame(state) {
   stars.forEach((star) => {
     if (isColliding(planePos, star, 0.5)) {
       socket.emit('collect_star', { type: 'collect_star', starId: star.id });
+      playCollectSound();
     }
   });
 }
@@ -112,6 +124,8 @@ export function computeNewPosition(pos, command) {
   default:
     break;
   }
+  newPos.x = Math.min(5, Math.max(-5, newPos.x));
+  newPos.y = Math.min(5, Math.max(-5, newPos.y));
   return newPos;
 }
 

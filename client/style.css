@@ -6,3 +6,8 @@ body {
 #gameCanvas {
   border: 1px solid #000;
 }
+
+#playerName {
+  font-size: 1.2em;
+  margin-bottom: 4px;
+}

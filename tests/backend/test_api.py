@@ -20,6 +20,10 @@ class ApiTestCase(unittest.TestCase):
         res = register_user(data)
         self.assertEqual(res['status'], 'ok')
 
+    def test_register_requires_username(self):
+        with self.assertRaises(ValueError):
+            register_user({'email': 'e', 'password': 'p'})
+
     def test_collect_star_increases_score(self):
         stars.clear()
         stars.append({'id': 's1', 'x': 0, 'y': 0})

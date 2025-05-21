@@ -1,8 +1,12 @@
 try:
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException
+    from fastapi import (
+        FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException
+    )
+    from fastapi.responses import RedirectResponse
     from fastapi_socketio import SocketManager
     from pydantic import BaseModel
     from jose import jwt, JWTError
+    from authlib.jose import JsonWebKey, jwt as oidc_jwt
     from sqlalchemy import create_engine, Column, Integer, String
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.orm import sessionmaker, Session
@@ -61,6 +65,9 @@ except Exception:  # fallback for tests
         pass
     class HTTPException(Exception):
         pass
+    class RedirectResponse:
+        def __init__(self, url: str):
+            self.url = url
     class DummyBcrypt:
         @staticmethod
         def hash(p):
@@ -71,8 +78,26 @@ except Exception:  # fallback for tests
     bcrypt = DummyBcrypt
     jwt = None
     JWTError = Exception
+    class JsonWebKey:
+        @staticmethod
+        def import_key_set(data):
+            return data
+    class DummyClaims(dict):
+        def validate(self):
+            return None
+
+    class DummyOIDCJWT:
+        @staticmethod
+        def encode(header, claims, key):
+            return claims
+
+        @staticmethod
+        def decode(token, key):
+            return DummyClaims(token)
+    oidc_jwt = DummyOIDCJWT
 
 import os
+import json
 import uvicorn
 import asyncio
 import random
@@ -80,6 +105,14 @@ import time
 from uuid import uuid4
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'secret')
+OIDC_ISSUER = os.getenv('OIDC_ISSUER', '')
+OIDC_CLIENT_ID = os.getenv('OIDC_CLIENT_ID', '')
+OIDC_JWKS = os.getenv('OIDC_JWKS', '')
+OIDC_REDIRECT_URI = os.getenv('OIDC_REDIRECT_URI', '')
+if OIDC_JWKS:
+    jwk_set = JsonWebKey.import_key_set(json.loads(OIDC_JWKS))
+else:
+    jwk_set = None
 
 app = FastAPI()
 sm = SocketManager(app=app)
@@ -89,7 +122,9 @@ sm = SocketManager(app=app)
 async def startup_event():
     asyncio.create_task(spawn_stars())
 
-engine = create_engine('sqlite:///app.db', connect_args={'check_same_thread': False})
+engine = create_engine(
+    'sqlite:///app.db', connect_args={'check_same_thread': False}
+)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -101,7 +136,9 @@ class User(Base):
     password = Column(String)
     stars = Column(Integer, default=0)
 
-    def __init__(self, username: str, email: str, password: str, stars: int = 0):
+    def __init__(
+        self, username: str, email: str, password: str, stars: int = 0
+    ):
         self.username = username
         self.email = email
         self.password = password
@@ -136,7 +173,19 @@ def create_token(username: str) -> str:
 
 
 def verify_token(token: str) -> str:
-    """Validate a JWT and return the username if valid and not expired."""
+    """Validate a JWT/OIDC token and return the username."""
+    if jwk_set is not None:
+        try:
+            claims = oidc_jwt.decode(token, jwk_set)
+            claims.validate()
+        except Exception as exc:
+            raise HTTPException(status_code=401,
+                                detail='Invalid token') from exc
+        if OIDC_ISSUER and claims.get('iss') != OIDC_ISSUER:
+            raise HTTPException(status_code=401, detail='Invalid issuer')
+        if OIDC_CLIENT_ID and claims.get('aud') != OIDC_CLIENT_ID:
+            raise HTTPException(status_code=401, detail='Invalid audience')
+        return claims.get('sub') or claims.get('preferred_username', '')
     if jwt is None:
         return token
     try:
@@ -149,20 +198,23 @@ def verify_token(token: str) -> str:
         raise HTTPException(status_code=401, detail='Token expired')
     return payload.get('sub')
 
-@app.post('/register')
-async def register(req: RegisterRequest, db: Session = Depends(get_db)):
-    data = req.dict()
-    register_user(data, db)
-    return {'status': 'ok'}
+@app.get('/register')
+async def register():
+    if not OIDC_ISSUER:
+        raise HTTPException(status_code=500, detail='OIDC not configured')
+    url = (f"{OIDC_ISSUER}/register?client_id={OIDC_CLIENT_ID}"
+           f"&redirect_uri={OIDC_REDIRECT_URI}")
+    return RedirectResponse(url)
 
 
-@app.post('/login')
-async def login(req: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter_by(username=req.username).first()
-    if not user or not bcrypt.verify(req.password, user.password):
-        raise HTTPException(status_code=401, detail='Invalid credentials')
-    token = create_token(user.username)
-    return {'token': token}
+@app.get('/login')
+async def login():
+    if not OIDC_ISSUER:
+        raise HTTPException(status_code=500, detail='OIDC not configured')
+    url = (f"{OIDC_ISSUER}/authorize?response_type=code&client_id="
+           f"{OIDC_CLIENT_ID}&redirect_uri={OIDC_REDIRECT_URI}"
+           f"&scope=openid email profile")
+    return RedirectResponse(url)
 
 @app.get('/stats')
 async def get_stats(authorization: str = '', db: Session = Depends(get_db)):
@@ -238,7 +290,11 @@ async def websocket_endpoint(socket: WebSocket):
                         if username:
                             try:
                                 db = SessionLocal()
-                                user = db.query(User).filter_by(username=username).first()
+                                user = (
+                                    db.query(User)
+                                    .filter_by(username=username)
+                                    .first()
+                                )
                                 if user:
                                     user.stars += 1
                                     db.commit()
@@ -268,7 +324,11 @@ def register_user(data: dict, db: Session = None) -> dict:
         close = False
     try:
         hashed = bcrypt.hash(data['password'])
-        user = User(username=data['username'], email=data['email'], password=hashed)
+        user = User(
+            username=data['username'],
+            email=data['email'],
+            password=hashed
+        )
         if hasattr(db, 'add'):
             db.add(user)
             db.commit()

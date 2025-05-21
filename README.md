@@ -10,6 +10,10 @@ Requirements:
 
 Environment variables:
 - `SECRET_KEY` (optional)
+- `OIDC_ISSUER` - OIDC provider URL
+- `OIDC_CLIENT_ID` - client ID
+- `OIDC_JWKS` - JWKS JSON string
+- `OIDC_REDIRECT_URI` - callback URL
 
 Run:
 ```bash

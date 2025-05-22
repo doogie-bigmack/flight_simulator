@@ -38,10 +38,14 @@ class ApiTestCase(unittest.TestCase):
         os.environ['OIDC_CLIENT_ID'] = 'client'
         import importlib
         importlib.reload(m)
-        token = m.oidc_jwt.encode({'alg': 'none'},
-                                 {'iss': 'issuer', 'aud': 'client',
-                                  'sub': 'bob'}, None)
-        self.assertEqual(m.verify_token(token), 'bob')
+        token = m.oidc_jwt.encode(
+            {'alg': 'none'},
+            {'iss': 'issuer', 'aud': 'client', 'sub': 'bob'},
+            None
+        )
+        payload = m.verify_token(token)
+        self.assertIsInstance(payload, dict)
+        self.assertEqual(payload.get('sub'), 'bob')
 
     def test_verify_token_bad_issuer(self):
         os.environ['OIDC_JWKS'] = '{"keys":[]}'
@@ -49,10 +53,11 @@ class ApiTestCase(unittest.TestCase):
         os.environ['OIDC_CLIENT_ID'] = 'client'
         import importlib
         importlib.reload(m)
-        token = m.oidc_jwt.encode({'alg': 'none'},
-                                 {'iss': 'other', 'aud': 'client',
-                                  'sub': 'bob'}, None)
-        with self.assertRaises(m.HTTPException):
-            m.verify_token(token)
+        token = m.oidc_jwt.encode(
+            {'alg': 'none'},
+            {'iss': 'other', 'aud': 'client', 'sub': 'bob'},
+            None
+        )
+        self.assertIsNone(m.verify_token(token))
 if __name__ == '__main__':
     unittest.main()

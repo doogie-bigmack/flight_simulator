@@ -359,19 +359,26 @@ def create_token(username: str) -> str:
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 
-def verify_token(token: str) -> str:
-    """Validate a JWT and return the username if valid and not expired."""
+def verify_token(token: str) -> Optional[dict]:
+    """Validate a JWT and return the decoded payload if valid."""
     if jwt is None:
-        return token
+        return {'sub': token}
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'],
-                             options={'verify_exp': False})
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail='Invalid token') from exc
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=['HS256'],
+            options={'verify_exp': False}
+        )
+    except Exception:
+        return None
+
     exp = payload.get('exp')
     if exp is not None and exp < int(time.time()):
-        raise HTTPException(status_code=401, detail='Token expired')
-    return payload.get('sub')
+        return None
+
+    return payload
 
 @app.post('/register')
 async def register(req: RegisterRequest, db: Session = Depends(get_db)):
@@ -448,11 +455,21 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
 @app.get('/stats')
 async def get_stats(authorization: str = '', db: Session = Depends(get_db)):
     token = authorization.replace('Bearer ', '') if authorization else ''
-    username = verify_token(token)
+    payload = verify_token(token)
+    if not payload:
+        return {'status': 'error', 'message': 'Invalid token'}
+
+    username = payload.get('sub')
     user = db.query(User).filter_by(username=username).first()
     if not user:
-        raise HTTPException(status_code=404, detail='User not found')
-    return {'username': username, 'stars': user.stars}
+        return {'status': 'error', 'message': 'User not found'}
+
+    return {
+        'status': 'ok',
+        'stars': user.stars,
+        'experience': user.experience,
+        'level': user.level,
+    }
 
 # Game state variables
 players = {}
@@ -546,9 +563,8 @@ async def websocket_endpoint(socket: WebSocket):
     token = ''
     if hasattr(socket, 'query_params'):
         token = socket.query_params.get('token', '')
-    try:
-        verify_token(token)
-    except HTTPException:
+    payload = verify_token(token)
+    if payload is None:
         if hasattr(socket, 'close'):
             await socket.close(code=403)
         return

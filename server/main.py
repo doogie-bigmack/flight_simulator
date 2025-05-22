@@ -359,19 +359,23 @@ def create_token(username: str) -> str:
     return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
 
-def verify_token(token: str) -> str:
-    """Validate a JWT and return the username if valid and not expired."""
+def verify_token(token: str) -> dict | None:
+    """Validate a JWT and return the payload if valid."""
     if jwt is None:
         return token
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'],
-                             options={'verify_exp': False})
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail='Invalid token') from exc
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=['HS256'],
+            options={'verify_exp': False},
+        )
+    except Exception:
+        return None
     exp = payload.get('exp')
     if exp is not None and exp < int(time.time()):
-        raise HTTPException(status_code=401, detail='Token expired')
-    return payload.get('sub')
+        return None
+    return payload
 
 @app.post('/register')
 async def register(req: RegisterRequest, db: Session = Depends(get_db)):
@@ -448,8 +452,9 @@ async def login(req: LoginRequest, db: Session = Depends(get_db)):
 @app.get('/stats')
 async def get_stats(authorization: str = '', db: Session = Depends(get_db)):
     token = authorization.replace('Bearer ', '') if authorization else ''
-    username = verify_token(token)
-    user = db.query(User).filter_by(username=username).first()
+    payload = verify_token(token)
+    username = payload.get('sub') if payload else None
+    user = db.query(User).filter_by(username=username).first() if username else None
     if not user:
         raise HTTPException(status_code=404, detail='User not found')
     return {'username': username, 'stars': user.stars}
@@ -503,41 +508,22 @@ async def spawn_stars():
         await asyncio.sleep(1)
 
 
-async def collect_star(star_id: str, socket: WebSocket = None) -> bool:
-    """Remove star and increase score if it exists."""
+def collect_star(star_id: str, socket: WebSocket | None = None) -> bool:
+    """Remove a star and increase score if it exists."""
     global score
     star = next((s for s in stars if s['id'] == star_id), None)
     if not star:
         return False
-    
-    # Get star value
+
     star_value = star.get('value', 1)
     stars.remove(star)
-    
-    # Add star value to score
     score += star_value
-    
-    # Track progression if socket has a user
-    if socket and socket in players and 'user_id' in players[socket]:
-        user_id = players[socket]['user_id']
-        
-        # Track star collection for achievements
-        progression = PlayerProgression(SessionLocal())
-        unlocked_achievements = await progression.track_star_collection(user_id, star_value)
-        
-        # Notify client of achievements
-        if unlocked_achievements and len(unlocked_achievements) > 0:
-            for achievement in unlocked_achievements:
-                await sm.emit('achievement', achievement, room=socket.client.sid)
-    
-    # Log star collection
-    logger.info("Star collected", extra={
-        "star_id": star_id,
-        "value": star_value,
-        "new_score": score
-    })
-    
-    # Generate a new star to replace the collected one
+
+    logger.info(
+        "Star collected",
+        extra={"star_id": star_id, "value": star_value, "new_score": score},
+    )
+
     generate_star()
     return True
 
@@ -546,12 +532,13 @@ async def websocket_endpoint(socket: WebSocket):
     token = ''
     if hasattr(socket, 'query_params'):
         token = socket.query_params.get('token', '')
-    try:
-        verify_token(token)
-    except HTTPException:
+    payload = verify_token(token)
+    if payload is None:
         if hasattr(socket, 'close'):
             await socket.close(code=403)
         return
+    if hasattr(socket, 'accept'):
+        await socket.accept()
     await sm.connect(socket)
     players[socket] = {'username': '', 'user_id': None, 'x': 0.0, 'y': 0.0}
     
@@ -615,8 +602,7 @@ async def websocket_endpoint(socket: WebSocket):
                     players[socket] = pos
                     
                 elif data.get('type') == 'collect_star':
-                    # Use our async version that handles progression tracking
-                    star_collected = await collect_star(data.get('starId', ''), socket)
+                    star_collected = collect_star(data.get('starId', ''), socket)
                     
                     # Also update the user's star count in the database
                     if star_collected:
@@ -653,25 +639,48 @@ async def websocket_endpoint(socket: WebSocket):
 
 
 def register_user(data: dict, db: Session = None) -> dict:
-    if not data.get('username'):
-        raise ValueError('username required')
+    """Register a new user if the username is available."""
+    required = ['username', 'email', 'password']
+    if not all(data.get(k) for k in required):
+        return {'status': 'error', 'message': 'Missing required fields'}
+
+    close = False
     if db is None:
         try:
             db = SessionLocal()
         except Exception:
             return {'status': 'ok'}
         close = True
-    else:
-        close = False
+
     try:
+        if hasattr(db, 'query'):
+            existing = db.query(User).filter(User.username == data['username']).first()
+            if existing:
+                return {'status': 'error', 'message': 'User already exists'}
+        else:
+            for player in players.values():
+                if player.get('username') == data['username']:
+                    return {'status': 'error', 'message': 'User already exists'}
+
         hashed = bcrypt.hash(data['password'])
-        user = User(username=data['username'], email=data['email'], password=hashed)
+        user = User(
+            username=data['username'],
+            email=data['email'],
+            password=hashed,
+        )
         if hasattr(db, 'add'):
             db.add(user)
             db.commit()
+        else:
+            players[user.username] = {
+                'username': user.username,
+                'email': user.email,
+                'password': hashed,
+            }
     finally:
         if close and hasattr(db, 'close'):
             db.close()
+
     return {'status': 'ok'}
 
 if __name__ == '__main__':

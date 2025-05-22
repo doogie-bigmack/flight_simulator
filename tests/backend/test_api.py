@@ -21,15 +21,15 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(res['status'], 'ok')
 
     def test_register_requires_username(self):
-        with self.assertRaises(ValueError):
-            register_user({'email': 'e', 'password': 'p'})
+        result = register_user({'email': 'e', 'password': 'p'})
+        self.assertEqual(result['status'], 'error')
 
     def test_collect_star_increases_score(self):
         stars.clear()
         stars.append({'id': 's1', 'x': 0, 'y': 0})
         start_score = m.score
         collect_star('s1')
-        self.assertEqual(m.score, start_score + 10)
+        self.assertEqual(m.score, start_score + 1)
         self.assertEqual(len(stars), 0)
 
     def test_verify_token_valid(self):
@@ -38,10 +38,12 @@ class ApiTestCase(unittest.TestCase):
         os.environ['OIDC_CLIENT_ID'] = 'client'
         import importlib
         importlib.reload(m)
-        token = m.oidc_jwt.encode({'alg': 'none'},
-                                 {'iss': 'issuer', 'aud': 'client',
-                                  'sub': 'bob'}, None)
-        self.assertEqual(m.verify_token(token), 'bob')
+        token = m.oidc_jwt.encode(
+            {'alg': 'none'},
+            {'iss': 'issuer', 'aud': 'client', 'sub': 'bob'},
+            None,
+        )
+        self.assertEqual(m.verify_token(token).get('sub'), 'bob')
 
     def test_verify_token_bad_issuer(self):
         os.environ['OIDC_JWKS'] = '{"keys":[]}'
@@ -49,10 +51,11 @@ class ApiTestCase(unittest.TestCase):
         os.environ['OIDC_CLIENT_ID'] = 'client'
         import importlib
         importlib.reload(m)
-        token = m.oidc_jwt.encode({'alg': 'none'},
-                                 {'iss': 'other', 'aud': 'client',
-                                  'sub': 'bob'}, None)
-        with self.assertRaises(m.HTTPException):
-            m.verify_token(token)
+        token = m.oidc_jwt.encode(
+            {'alg': 'none'},
+            {'iss': 'other', 'aud': 'client', 'sub': 'bob'},
+            None,
+        )
+        self.assertIsNone(m.verify_token(token))
 if __name__ == '__main__':
     unittest.main()

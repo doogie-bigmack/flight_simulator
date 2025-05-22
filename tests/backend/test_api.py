@@ -31,5 +31,28 @@ class ApiTestCase(unittest.TestCase):
         collect_star('s1')
         self.assertEqual(m.score, start_score + 10)
         self.assertEqual(len(stars), 0)
+
+    def test_verify_token_valid(self):
+        os.environ['OIDC_JWKS'] = '{"keys":[]}'
+        os.environ['OIDC_ISSUER'] = 'issuer'
+        os.environ['OIDC_CLIENT_ID'] = 'client'
+        import importlib
+        importlib.reload(m)
+        token = m.oidc_jwt.encode({'alg': 'none'},
+                                 {'iss': 'issuer', 'aud': 'client',
+                                  'sub': 'bob'}, None)
+        self.assertEqual(m.verify_token(token), 'bob')
+
+    def test_verify_token_bad_issuer(self):
+        os.environ['OIDC_JWKS'] = '{"keys":[]}'
+        os.environ['OIDC_ISSUER'] = 'issuer'
+        os.environ['OIDC_CLIENT_ID'] = 'client'
+        import importlib
+        importlib.reload(m)
+        token = m.oidc_jwt.encode({'alg': 'none'},
+                                 {'iss': 'other', 'aud': 'client',
+                                  'sub': 'bob'}, None)
+        with self.assertRaises(m.HTTPException):
+            m.verify_token(token)
 if __name__ == '__main__':
     unittest.main()

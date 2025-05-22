@@ -41,3 +41,10 @@ Sky Squad is a cooperative 2D flight game aimed at children aged 6–12. Players
 ## Assets
 Use free assets from OpenGameArt.org or similar sources. Placeholder images can be used during development with instructions to replace them before release.
 
+## Environment Variables
+- `SECRET_KEY`: secret for local JWT tokens.
+- `OIDC_ISSUER`: URL of the OIDC provider.
+- `OIDC_CLIENT_ID`: client ID for this game.
+- `OIDC_JWKS`: JWKS string containing provider public keys.
+- `OIDC_REDIRECT_URI`: redirect URI registered with the provider.
+

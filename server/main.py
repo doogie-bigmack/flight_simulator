@@ -459,21 +459,6 @@ players = {}
 score = 0
 stars = []
 star_id_counter = 0
-
-# Configure logger
-logger = logging.getLogger("sky_squad")
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(json.dumps({
-    "timestamp": "%(asctime)s",
-    "level": "%(levelname)s",
-    "message": "%(message)s",
-    "module": "%(module)s",
-    "function": "%(funcName)s"
-})))
-logger.addHandler(handler)
-
-
 def generate_star():
     """Generate a new star with random position and value"""
     global stars, star_id_counter

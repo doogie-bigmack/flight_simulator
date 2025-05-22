@@ -79,13 +79,13 @@ def backup_database() -> Optional[str]:
             "Database file not found",
             extra={"db_path": db_path}
         )
-        return None
+        raise SystemExit(1)
     
     ensure_backup_directory(backup_dir)
     
     # Create timestamp for backup filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_filename = f"game_backup_{timestamp}.db"
+    backup_filename = f"game_{timestamp}.db"
     backup_path = os.path.join(backup_dir, backup_filename)
     
     # Copy database file
@@ -156,8 +156,11 @@ def cleanup_old_backups(backup_dir: str, keep: int = 5) -> None:
     """
     try:
         # Get all backup files
-        backup_files = [f for f in os.listdir(backup_dir) 
-                       if f.startswith("game_backup_") and f.endswith(".db")]
+        backup_files = [
+            f
+            for f in os.listdir(backup_dir)
+            if f.startswith("game_") and f.endswith(".db")
+        ]
         
         # Sort by timestamp (newest first)
         backup_files.sort(reverse=True)

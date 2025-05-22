@@ -242,6 +242,7 @@ class TestPlayerProgressionExtended(unittest.IsolatedAsyncioTestCase):
         # Mock current time
         current_time = datetime(2025, 5, 20, 12, 0, 0)
         mock_datetime.now.return_value = current_time
+        mock_datetime.fromisoformat = datetime.fromisoformat
         
         # Mock get and update user
         mock_user = {
@@ -254,12 +255,10 @@ class TestPlayerProgressionExtended(unittest.IsolatedAsyncioTestCase):
         self.progression._update_user_progression = AsyncMock()
         self.progression.unlock_achievement = AsyncMock(return_value={"id": "streak_3"})
         
-        # Based on the actual implementation, streak resets to 1 if not consecutive days
-        # Adapt our test to match this behavior
         streak, achievement = await self.progression.update_login_streak(user_id=1)
-        
-        # Verify results as per the actual implementation
-        self.assertEqual(streak, 1)  # Actual implementation resets or starts at 1
+
+        # Consecutive day should increase streak
+        self.assertEqual(streak, 3)
         # Note: achievement may be None depending on implementation details
         
         # Test streak with a long gap (more than 1 day)
@@ -269,7 +268,7 @@ class TestPlayerProgressionExtended(unittest.IsolatedAsyncioTestCase):
         
         streak, achievement = await self.progression.update_login_streak(user_id=1)
         
-        # Should reset streak to 1
+        # Should reset streak to 1 after long gap
         self.assertEqual(streak, 1)
         self.assertIsNone(achievement)
         

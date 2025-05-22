@@ -1,6 +1,7 @@
 import unittest
 import os
 import sys
+import asyncio
 
 # Ensure the server package is importable when tests are run with pytest
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -28,7 +29,7 @@ class ApiTestCase(unittest.TestCase):
         stars.clear()
         stars.append({'id': 's1', 'x': 0, 'y': 0})
         start_score = m.score
-        collect_star('s1')
+        asyncio.run(collect_star('s1'))
         self.assertEqual(m.score, start_score + 10)
         self.assertEqual(len(stars), 0)
 

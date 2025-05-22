@@ -5,6 +5,7 @@ import unittest
 import os
 import sys
 import json
+import asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
 
 # Ensure the server package is importable when tests are run with pytest
@@ -67,7 +68,7 @@ class TestMainAPI(unittest.TestCase):
         """Test collecting a non-existent star"""
         m.stars.clear()
         m.score = 0
-        result = m.collect_star('nonexistent')
+        result = asyncio.run(m.collect_star('nonexistent'))
         self.assertFalse(result)
         self.assertEqual(m.score, 0)
     
@@ -85,7 +86,7 @@ class TestMainAPI(unittest.TestCase):
         })
         
         # Collect the star
-        result = m.collect_star(star_id)
+        result = asyncio.run(m.collect_star(star_id))
         
         # Verify results
         self.assertTrue(result)

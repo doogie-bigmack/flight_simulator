@@ -1,6 +1,6 @@
 # Task ID: 4
 # Title: Player Character Implementation
-# Status: pending
+# Status: done
 # Dependencies: 3
 # Priority: high
 # Description: Create and implement the player character with movement controls optimized for children aged 6-12.

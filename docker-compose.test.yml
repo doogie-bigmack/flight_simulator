@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/app
+      - ./data/test:/app/data  # SQLite test database storage
+    environment:
+      - ENV=test
+      - PYTEST_ADDOPTS=--color=yes
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - DATABASE_URL=sqlite:///data/test.db
+      - TEST_MODE=true
+      - DISABLE_AUTH=true
+      - TEST_SCOPE=${TEST_SCOPE:-all}  # Can be: all, backend, frontend, performance
+      - TEST_COVERAGE=${TEST_COVERAGE:-false}
+      - AUDIO_ENABLED=true
+      - PROGRESSION_ENABLED=true
+      - CHALLENGES_ENABLED=true
+      - AUDIO_MUTED_FOR_TESTS=true
+      - VISUAL_FEEDBACK_ENABLED=true
+    command: >
+      bash -c "
+        mkdir -p /app/data &&
+        pip install -e .[test] &&
+        bash scripts/run_tests.sh
+      "
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  test-data:  # Named volume for test database persistence

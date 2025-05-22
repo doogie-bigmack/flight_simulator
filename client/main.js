@@ -140,6 +140,9 @@ function startGame(name) {
   }
 }
 
+// Expose startGame globally so login.js can invoke it
+window.startGame = startGame;
+
 function initScene() {
   try {
     logEvent('Initializing scene', { canvasExists: !!document.getElementById('gameCanvas') });

@@ -81,7 +81,8 @@ class TestMainAPI(unittest.TestCase):
         m.stars.append({
             'id': star_id,
             'x': 100,
-            'y': 100
+            'y': 100,
+            'value': 10
         })
         
         # Collect the star
@@ -89,7 +90,7 @@ class TestMainAPI(unittest.TestCase):
         
         # Verify results
         self.assertTrue(result)
-        self.assertEqual(m.score, 1)  # Default value is 1
+        self.assertEqual(m.score, 10)  # Default value is 10
         self.assertEqual(len(m.stars), 0)
     
     @patch('server.main.bcrypt')

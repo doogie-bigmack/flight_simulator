@@ -480,7 +480,8 @@ def generate_star():
     star_id_counter += 1
     
     # Randomly assign value - 10% chance of special star
-    value = 5 if random.random() < 0.1 else 1
+    # Regular stars are worth 10 points; special stars are worth 50
+    value = 50 if random.random() < 0.1 else 10
     
     star = {
         'id': f'star_{star_id_counter}',

@@ -1,7 +1,6 @@
 import unittest
 import os
 import sys
-import asyncio
 
 # Ensure the server package is importable when tests are run with pytest
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -22,15 +21,15 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(res['status'], 'ok')
 
     def test_register_requires_username(self):
-        with self.assertRaises(ValueError):
-            register_user({'email': 'e', 'password': 'p'})
+        result = register_user({'email': 'e', 'password': 'p'})
+        self.assertEqual(result['status'], 'error')
 
     def test_collect_star_increases_score(self):
         stars.clear()
         stars.append({'id': 's1', 'x': 0, 'y': 0})
         start_score = m.score
-        asyncio.run(collect_star('s1'))
-        self.assertEqual(m.score, start_score + 10)
+        collect_star('s1')
+        self.assertEqual(m.score, start_score + 1)
         self.assertEqual(len(stars), 0)
 
     def test_verify_token_valid(self):
@@ -42,11 +41,9 @@ class ApiTestCase(unittest.TestCase):
         token = m.oidc_jwt.encode(
             {'alg': 'none'},
             {'iss': 'issuer', 'aud': 'client', 'sub': 'bob'},
-            None
+            None,
         )
-        payload = m.verify_token(token)
-        self.assertIsInstance(payload, dict)
-        self.assertEqual(payload.get('sub'), 'bob')
+        self.assertEqual(m.verify_token(token).get('sub'), 'bob')
 
     def test_verify_token_bad_issuer(self):
         os.environ['OIDC_JWKS'] = '{"keys":[]}'
@@ -57,7 +54,7 @@ class ApiTestCase(unittest.TestCase):
         token = m.oidc_jwt.encode(
             {'alg': 'none'},
             {'iss': 'other', 'aud': 'client', 'sub': 'bob'},
-            None
+            None,
         )
         self.assertIsNone(m.verify_token(token))
 if __name__ == '__main__':

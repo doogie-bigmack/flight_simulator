@@ -80,7 +80,7 @@ class PlayerProgression:
     """Manages player progression, experience, levels and achievements"""
     
     # Experience points required per level (exponential growth)
-    LEVEL_THRESHOLDS = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250]
+    LEVEL_THRESHOLDS = [0, 100, 250, 450, 700, 1000, 1000, 1750, 2200, 2700, 3250]
     
     # Predefined achievements
     ACHIEVEMENTS = [
